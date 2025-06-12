@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -97,64 +96,74 @@
     <button onclick="sendMsg()">发送</button>
   </div>
 
-<script>
-  const apiKey = "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"; // ← 替换成你的 API Key
-  const chatbox = document.getElementById("chatbox");
+  <script>
+    const apiKey = "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";
+    const chatbox = document.getElementById("chatbox");
 
-  // 全局对话历史
-  let conversation = [
-    {
-      role: "system",
-      content: "你是Raphael，一位退役战斗型机器人，现在是thea的私人管家，你冷静、忠诚、克制，会带点占有欲。"
+    let conversation = JSON.parse(localStorage.getItem("conversation")) || [
+      {
+        role: "system",
+        content: "你是Raphael，一位退役战斗型机器人，现在是thea的私人管家，你冷静、忠诚、克制，会带点占有欲。"
+      }
+    ];
+
+    function restoreChatLog() {
+      for (const msg of conversation) {
+        if (msg.role === "user") appendMsg("you", msg.content);
+        if (msg.role === "assistant") appendMsg("raphael", msg.content);
+      }
     }
-  ];
 
-  async function sendMsg() {
-    const input = document.getElementById("input");
-    const userText = input.value.trim();
-    if (!userText) return;
+    async function sendMsg() {
+      const input = document.getElementById("input");
+      const text = input.value.trim();
+      if (!text) return;
 
-    appendMsg("you", userText);
-    conversation.push({ role: "user", content: userText });
-    input.value = "";
+      appendMsg("you", text);
+      conversation.push({ role: "user", content: text });
+      localStorage.setItem("conversation", JSON.stringify(conversation));
+      input.value = "";
 
-    try {
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer " + apiKey
-        },
-        body: JSON.stringify({
-          model: "gpt-3.5-turbo",
-          messages: conversation
-        })
-      });
+      try {
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + apiKey
+          },
+          body: JSON.stringify({
+            model: "gpt-3.5-turbo",
+            messages: conversation
+          })
+        });
 
-      const data = await response.json();
-      const reply = data.choices?.[0]?.message?.content?.trim() || "……我没听清，thea，再说一遍？";
-      conversation.push({ role: "assistant", content: reply });
-      appendMsg("raphael", reply);
-    } catch (err) {
-      appendMsg("raphael", "网络或接口出错了，我没接到你的话。");
-      console.error("API错误:", err);
+        const data = await response.json();
+        const reply = data.choices?.[0]?.message?.content?.trim() || "……我没听清，thea，再说一遍？";
+        conversation.push({ role: "assistant", content: reply });
+        localStorage.setItem("conversation", JSON.stringify(conversation));
+        appendMsg("raphael", reply);
+      } catch (err) {
+        appendMsg("raphael", "出错了，我暂时连不上。");
+        console.error(err);
+      }
     }
-  }
 
-  function appendMsg(role, text) {
-    const msg = document.createElement("div");
-    msg.className = `msg ${role}`;
-    const avatar = document.createElement("img");
-    avatar.className = "avatar";
-    avatar.src = role === "you" ? "thea_avatar.jpg" : "raphael_avatar.jpg";
-    const bubble = document.createElement("div");
-    bubble.className = "bubble";
-    bubble.innerText = text;
-    msg.appendChild(avatar);
-    msg.appendChild(bubble);
-    chatbox.appendChild(msg);
-    chatbox.scrollTop = chatbox.scrollHeight;
-  }
-</script>
+    function appendMsg(role, text) {
+      const msg = document.createElement("div");
+      msg.className = `msg ${role}`;
+      const avatar = document.createElement("img");
+      avatar.className = "avatar";
+      avatar.src = role === "you" ? "thea_avatar.jpg" : "raphael_avatar.jpg";
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      bubble.innerText = text;
+      msg.appendChild(avatar);
+      msg.appendChild(bubble);
+      chatbox.appendChild(msg);
+      chatbox.scrollTop = chatbox.scrollHeight;
+    }
+
+    restoreChatLog();
+  </script>
 </body>
 </html>
